@@ -10,24 +10,23 @@ trait Course:
   def instructor: String
   def category: String // e.g., "Programming", "Data Science", "Design"
 
+case class CourseImpl(courseId: String, title: String, instructor: String, category: String) extends Course
+
 object Course:
   // Factory method for creating Course instances
-  def apply(courseId: String, title: String, instructor: String, category: String): Course = ???
+  //type Course = Course
+  def apply(courseId: String, title: String, instructor: String, category: String): Course = CourseImpl(courseId, title, instructor, category)
 /**
  * Manages courses and student enrollments on an online learning platform.
  */
+class coursesAndEnrollments(var courseName: Course, var students: Sequence[String]) //courses and its students
 trait OnlineCoursePlatform:
-  /**
-   * Adds a new course to the platform's catalog.
-   * @param course The course to add.
-   */
+
+  var courses: Sequence[Course]
+  var enrollments: Sequence[coursesAndEnrollments]
+
   def addCourse(course: Course): Unit
 
-  /**
-   * Finds courses belonging to a specific category.
-   * @param category The category to search for.
-   * @return A sequence of courses in that category.
-   */
   def findCoursesByCategory(category: String): Sequence[Course]
 
   /**
@@ -84,9 +83,103 @@ trait OnlineCoursePlatform:
 
 end OnlineCoursePlatform
 
+
 object OnlineCoursePlatform:
-  // Factory method for creating an empty platform instance
-  def apply(): OnlineCoursePlatform = ??? // Fill Here!
+
+  def apply(): OnlineCoursePlatform =  OnlineCoursePlatformImpl(Sequence.Nil(), Sequence.Nil())
+
+  private class OnlineCoursePlatformImpl(var courses: Sequence[Course],
+                                          var enrollments: Sequence[coursesAndEnrollments]) extends OnlineCoursePlatform:
+
+  /**
+   * Adds a new course to the platform's catalog.
+   *
+   * @param course The course to add.
+   */
+  //extension(platform: OnlineCoursePlatform)
+    def addCourse(course: Course): Unit =
+      val newEnrollment = coursesAndEnrollments(course, Sequence.Nil())
+      courses = Sequence.Cons(course, courses)
+      enrollments = Sequence.Cons(newEnrollment, enrollments)
+    /**
+     * Finds courses belonging to a specific category.
+     *
+     * @param category The category to search for.
+     * @return A sequence of courses in that category.
+     */
+    def findCoursesByCategory(category: String): Sequence[Course] =
+      courses.filter { course => course.category == category }
+
+    /**
+     * Retrieves a specific course by its unique ID.
+     *
+     * @param courseId The ID of the course to retrieve.
+     * @return An Optional containing the course if found, otherwise Optional.empty.
+     */
+    def getCourse(courseId: String): Optional[Course] =
+      courses.find{ course => course.courseId == courseId }
+
+    /**
+     * Removes a course from the platform's catalog.
+     * (Note: This basic version doesn't handle cascading removal of enrollments).
+     *
+     * @param course The course to remove.
+     */
+    def removeCourse(course: Course): Unit =
+      courses = courses.filter{c => ! (course == c)}
+      enrollments = enrollments.filter{c => c.courseName != course}
+    /**
+     * Checks if a course with the given ID exists in the catalog.
+     *
+     * @param courseId The ID to check.
+     * @return true if the course exists, false otherwise.
+     */
+    def isCourseAvailable(courseId: String): Boolean =
+      courses.find { course => course.courseId == courseId } != Optional.Empty()
+
+    /**
+     * Enrolls a student in a specific course.
+     * Assumes studentId is unique for each student.
+     *
+     * @param studentId The ID of the student.
+     * @param courseId  The ID of the course to enroll in.
+     *                  Fails silently if the course doesn't exist.
+     */
+    def enrollStudent(studentId: String, courseId: String): Unit =
+      //We get the courseAndEnrollments from the courseID
+      val course = enrollments.find {course => course.courseName.courseId == courseId }.convert
+      //We add a new student to it's Sequence of students
+      course.students = Sequence.Cons(studentId, course.students)
+      //=
+
+    /**
+     * Unenrolls a student from a specific course.
+     *
+     * @param studentId The ID of the student.
+     * @param courseId  The ID of the course to unenroll from.
+     */
+    def unenrollStudent(studentId: String, courseId: String): Unit =
+      //We get the courseAndEnrollments from the courseID
+      val course = enrollments.find {course => course.courseName.courseId == courseId }.convert
+      course.students = course.students.filter{student => student != studentId}
+    /**
+     * Retrieves all courses a specific student is enrolled in.
+     *
+     * @param studentId The ID of the student.
+     * @return A sequence of courses the student is enrolled in.
+     */
+    def getStudentEnrollments(studentId: String): Sequence[Course] =
+      enrollments.filter(e => e.students.contains(studentId)).map(_.courseName)
+
+    /**
+     * Checks if a student is enrolled in a specific course.
+     *
+     * @param studentId The ID of the student.
+     * @param courseId  The ID of the course.
+     * @return true if the student is enrolled, false otherwise.
+     */
+    def isStudentEnrolled(studentId: String, courseId: String): Boolean =
+      getStudentEnrollments(studentId).contains(courses.find(c => c.courseId==courseId).convert)
 
 /**
  * Represents an online learning platform that offers courses and manages student enrollments.

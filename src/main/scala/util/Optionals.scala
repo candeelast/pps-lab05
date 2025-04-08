@@ -28,6 +28,9 @@ object Optionals:
     def filter(f: A => Boolean): Optional[A] = opt.flatMap:
       case a if f(a) => Just(a)
       case _ => Empty()
+      
+    def convert: A = opt match
+      case Just(a) => a
 
 
 @main def tryOptionals =
